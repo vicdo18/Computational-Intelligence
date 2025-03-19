@@ -10,7 +10,9 @@ from imblearn.over_sampling import SMOTE
 from sklearn.datasets import make_classification
 from imblearn.over_sampling import SMOTENC
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.optimizers import Adam
 
 # ----------------- Data Preprocessing ----------------- #
 
@@ -97,16 +99,33 @@ print(y_resampled.value_counts(normalize=True) * 100)
 
 # Define model architecture
 
+# model = Sequential([
+#     Dense(32, activation='relu', input_shape=(X.shape[1],)), # input # 32 16 1
+#     Dense(16, activation='relu'), # hidden layer
+#     Dense(1, activation='sigmoid') # output
+# ])
+
 model = Sequential([
-    Dense(32, activation='relu', input_shape=(X.shape[1],)),
-    Dense(16, activation='relu'),
-    Dense(1, activation='sigmoid')
+    Dense(128, activation='relu', kernel_regularizer=l2(0.001), input_shape=(X_train.shape[1],)),  
+    Dropout(0.2),  # Dropout with 30% probability
+
+    Dense(64, activation='relu', kernel_regularizer=l2(0.001)),  #erwthma g A2
+    Dropout(0.2),
+
+    # Dense(32, activation='relu', kernel_regularizer=l2(0.001)),  
+    # Dropout(0.2),
+
+    Dense(1, activation='sigmoid')  # Output layer for binary classification                 
 ])
 
+# Set the optimizer with learning rate η = 0.001
+optimizer = Adam(learning_rate=0.001)  # η = 0.001
+
 # Compile model with Cross-Entropy loss
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+# model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy','mse'])
 
 # Train model
 # history = model.fit(X_smote, y_smote, epochs=100, batch_size=32, validation_split=0.2)
-history = model.fit(X_resampled, y_resampled, epochs=100, batch_size=32, validation_split=0.2)
+history = model.fit(X_resampled, y_resampled, epochs=100, batch_size=16, validation_split=0.2)
 
