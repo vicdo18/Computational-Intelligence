@@ -47,13 +47,13 @@ y = data[target_col]
 
 # MinMaxScaler
 scaler = MinMaxScaler()
-X[continuous_cols] = scaler.fit_transform(X[continuous_cols])
+X[continuous_cols] = scaler.fit_transform(X[continuous_cols])  # scale continuous features
 
 # One-Hot Encode categorical features
 X = pd.get_dummies(X, columns=categorical_cols)
 
 # Ensure binary variables are 0/1 integers
-X[binary_cols] = X[binary_cols].astype(int)
+X[binary_cols] = X[binary_cols].astype(int) 
 
 # Display processed data
 print(X.head())
@@ -67,11 +67,11 @@ def create_model(input_shape):  # Pass the input shape dynamically
         Dense(1, activation='sigmoid')  # binary classification output
     ])
     optimizer = Adam(learning_rate=0.001)
-    model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy','mse'])
     return model
 
 # Define 5-Fold Stratified Cross-Validation
-kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42) 
 
 # Iterate over folds
 for fold, (train_index, test_index) in enumerate(kf.split(X, y), start=1):
@@ -87,8 +87,8 @@ for fold, (train_index, test_index) in enumerate(kf.split(X, y), start=1):
     X_resampled, y_resampled = smote_nc.fit_resample(X_train_fold, y_train_fold)
 
     print(f"Fold {fold}:")
-    print(f"Train set class distribution after SMOTENC:\n{y_resampled.value_counts(normalize=True)}")
-    print(f"Test set class distribution:\n{y_test_fold.value_counts(normalize=True)}\n")
+    # print(f"Train set class distribution after SMOTENC:\n{y_resampled.value_counts(normalize=True)}")
+    # print(f"Test set class distribution:\n{y_test_fold.value_counts(normalize=True)}\n")
 
     # Create and train model for each fold
     model = create_model(X_train_fold.shape[1])
@@ -96,7 +96,7 @@ for fold, (train_index, test_index) in enumerate(kf.split(X, y), start=1):
     model.fit(X_resampled, y_resampled, epochs=100, batch_size=32, validation_data=(X_test_fold, y_test_fold))
 
     # Evaluate the model on the test set
-    loss, accuracy = model.evaluate(X_test_fold, y_test_fold)
+    loss, accuracy, mse = model.evaluate(X_test_fold, y_test_fold)
     print(f"Test set accuracy for Fold {fold}: {accuracy * 100:.2f}%\n")  # create a table to store the accuracy of each fold
 
     # print(f"Average test set accuracy: {np.mean(accuracy) * 100:.2f}%\n") 
