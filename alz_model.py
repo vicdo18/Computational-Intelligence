@@ -17,9 +17,6 @@ from tensorflow.keras.optimizers import Adam
 
 # import csv data
 data = pd.read_csv('alzheimers_disease_data.csv')
-# print(data.head())   # testing csv import 
-# data.info() 
-
 # print(data.isnull().sum())  # no missing values
 
 data = data.drop(columns=['PatientID', 'DoctorInCharge'])
@@ -33,7 +30,7 @@ continuous_cols = [
     'MMSE', 'FunctionalAssessment', 'ADL'
 ]
 
-categorical_cols = ['Ethnicity', 'EducationLevel']
+categorical_cols = ['Ethnicity', 'EducationLevel']  # not exactly categorical,
 binary_cols = [
     'Gender', 'Smoking', 'FamilyHistoryAlzheimers', 'CardiovascularDisease', 'Diabetes', 
     'Depression', 'HeadInjury', 'Hypertension', 'MemoryComplaints', 'BehavioralProblems', 
@@ -49,8 +46,8 @@ y = data[target_col]
 scaler = MinMaxScaler()
 X[continuous_cols] = scaler.fit_transform(X[continuous_cols])  # scale continuous features
 
-# One-Hot Encode categorical features
-X = pd.get_dummies(X, columns=categorical_cols)
+# # One-Hot Encode categorical features
+# X = pd.get_dummies(X, columns=categorical_cols) -- remove 
 
 # Ensure binary variables are 0/1 integers
 X[binary_cols] = X[binary_cols].astype(int) 
