@@ -16,8 +16,7 @@ from tensorflow.keras.regularizers import l2
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import Input
 import warnings
-
-# warnings.filterwarnings("ignore", message="Do not pass an `input_shape`/`input_dim` argument to a layer.")
+from collections import Counter
 
 # ----------------- Data Preprocessing ----------------- #
 
@@ -98,7 +97,7 @@ fold_metrics = {
     'precision': [],
     'recall': [],
     'f1': [],
-    'roc_auc': []
+    'roc_auc': [],
     'mse': []
 }
 
@@ -135,7 +134,7 @@ for fold, (train_idx, val_idx) in enumerate(skf.split(X_train_np, y_train_np)):
     fold_metrics['recall'].append(recall_score(y_fold_val, y_pred))
     fold_metrics['f1'].append(f1_score(y_fold_val, y_pred))
     fold_metrics['roc_auc'].append(roc_auc_score(y_fold_val, y_pred_proba))
-    fold_metrics['mse'].append(np.mean((y_fold_val - y_pred.flatten())**2))  # Mean Squared Error
+    fold_metrics['mse'].append(history.history['val_mse'][-1])
     
     # Print fold results
     print(f"Fold {fold + 1} Metrics:")
