@@ -15,6 +15,7 @@ from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import Input
+from tensorflow.keras.callbacks import EarlyStopping
 import warnings
 from collections import Counter
 
@@ -188,33 +189,34 @@ results = {
 plt.figure(figsize=(12, 8))
 colors = ['blue', 'green', 'red', 'orange']  # Colors for different hidden units
 
+# Define early stopping callback
+early_stopping = EarlyStopping(
+    monitor='val_loss',     # Metric to monitor
+    patience=5,            # Number of epochs with no improvement before stopping
+    restore_best_weights=True,  # Keep the best weights when stopping
+    verbose=1
+)
+
+mean_val_accuracy = [] # solution 2 
+
 for H, color in zip(hidden_units_list, colors):
     print(f"\n=== Experiment: Hidden Units = {H} ===")
     
-    # def create_model(input_shape, hidden_units):
-    #     model = Sequential([
-    #         Input(shape=(input_shape,)),
-    #         Dense(hidden_units, activation='relu'),
-    #         Dense(1, activation='sigmoid')
-    #     ])
-    #     model.compile(
-    #     optimizer=Adam(learning_rate=0.001),
-    #     loss='binary_crossentropy',  # CE Loss
-    #     metrics=['accuracy', tf.keras.metrics.AUC(name='auc'), 'mse']  # MSE tracked here
-    # )
-    #     return model
-    
     # Track metrics across folds
     fold_histories = {'val_loss': [], 'val_accuracy': [], 'val_auc': [],'val_mse': []}
-    mean_val_accuracy = np.zeros(50)  # For convergence plot
+    all_val_accuracies = []  # Store all accuracy histories for plotting
+    # n_epochs = len(history.history['val_accuracy'])
+    # mean_val_accuracy = np.zeros(n_epochs)
+    # mean_val_accuracy = np.zeros(50)  # For convergence plot
     
     for fold, (train_idx, val_idx) in enumerate(StratifiedKFold(n_splits=5, shuffle=True, random_state=42).split(X_train_np, y_train_np)):
         model = create_model(input_shape=X_train_np.shape[1], hidden_units=H)
         history = model.fit(
             X_train_np[train_idx], y_train_np[train_idx],
             validation_data=(X_train_np[val_idx], y_train_np[val_idx]),
-            epochs=50,  # Fixed epochs (no early stopping)
+            epochs=50,  
             batch_size=32,
+            callbacks=[early_stopping],  
             verbose=0
         )
         
@@ -222,12 +224,31 @@ for H, color in zip(hidden_units_list, colors):
         for key in fold_histories:
             fold_histories[key].append(history.history[key])
         
+        # Store accuracy history for this fold
+        all_val_accuracies.append(history.history['val_accuracy'])
+
         # For convergence plot
-        mean_val_accuracy += np.array(history.history['val_accuracy'])
+        # mean_val_accuracy.append(history.history['val_accuracy'])
+        # mean_val_accuracy += np.array(history.history['val_accuracy'])
     
-    # Calculate mean metrics
-    mean_val_accuracy /= 5  # Average across folds
+    # Calculate mean accuracy (handles variable epoch counts)
+    max_epochs = max(len(acc) for acc in all_val_accuracies)
+    mean_val_accuracy = np.zeros(max_epochs)
+    counts = np.zeros(max_epochs)
+
+    for acc in all_val_accuracies:
+        current_epochs = len(acc)
+        mean_val_accuracy[:current_epochs] += np.array(acc)
+        counts[:current_epochs] += 1
+        
+    mean_val_accuracy = mean_val_accuracy / counts  # Avoid division by zero
+    
+    # Plot the mean accuracy
     plt.plot(mean_val_accuracy, color=color, label=f'H={H}', linestyle='-')
+
+    # # Calculate mean metrics
+    # mean_val_accuracy /= 5  # Average across folds
+    # plt.plot(mean_val_accuracy, color=color, label=f'H={H}', linestyle='-')
     
     # Record results
     results['Hidden Units'].append(H)
@@ -259,4 +280,4 @@ print("\n=== Performance Summary (50 Epochs) ===")
 print(results_df.to_markdown(index=False))
 
 #save results to csv
-results_df.to_csv('results.csv', index=False)
+# results_df.to_csv('results.csv', index=False)
