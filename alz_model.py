@@ -174,6 +174,10 @@ for metric in fold_metrics:
 I = X_train_np.shape[1]
 hidden_units_list = [I//2, 2*I//3, I, 2*I]  # [I/2, 2I/3, I, 2I]
 
+# Hyperparameter optimization for learning rate and momentum
+learning_rates = [0.001, 0.001, 0.05, 0.1]
+momentums = [0.2, 0.6, 0.6, 0.6]
+
 # Store results
 results = {
     'Hidden Units': [],
@@ -182,11 +186,19 @@ results = {
     'CE Loss': [],
     'Val F1': [],
     'Val ROC AUC': []
-    # 'Final Loss': []
 }
 
+hyper_results = {
+    'η': [],
+    'm': [],
+    'CE Loss': [],
+    'MSE': [],
+    'Accuracy': []
+}
+
+
 # Plotting setup
-plt.figure(figsize=(12, 8))
+# plt.figure(figsize=(12, 8))
 colors = ['blue', 'green', 'red', 'orange']  # Colors for different hidden units
 
 # Define early stopping callback
@@ -199,85 +211,154 @@ early_stopping = EarlyStopping(
 
 mean_val_accuracy = [] # solution 2 
 
-for H, color in zip(hidden_units_list, colors):
-    print(f"\n=== Experiment: Hidden Units = {H} ===")
+#------------------------------------------ a2 -----------------------------#
+
+# for H, color in zip(hidden_units_list, colors):
+#     print(f"\n=== Experiment: Hidden Units = {H} ===")
     
-    # Track metrics across folds
-    fold_histories = {'val_loss': [], 'val_accuracy': [], 'val_auc': [],'val_mse': []}
-    all_val_accuracies = []  # Store all accuracy histories for plotting
-    # n_epochs = len(history.history['val_accuracy'])
-    # mean_val_accuracy = np.zeros(n_epochs)
-    # mean_val_accuracy = np.zeros(50)  # For convergence plot
+#     # Track metrics across folds
+#     fold_histories = {'val_loss': [], 'val_accuracy': [], 'val_auc': [],'val_mse': []}
+#     all_val_accuracies = []  # Store all accuracy histories for plotting
     
-    for fold, (train_idx, val_idx) in enumerate(StratifiedKFold(n_splits=5, shuffle=True, random_state=42).split(X_train_np, y_train_np)):
-        model = create_model(input_shape=X_train_np.shape[1], hidden_units=H)
+#     for fold, (train_idx, val_idx) in enumerate(StratifiedKFold(n_splits=5, shuffle=True, random_state=42).split(X_train_np, y_train_np)):
+#         model = create_model(input_shape=X_train_np.shape[1], hidden_units=H)
+#         history = model.fit(
+#             X_train_np[train_idx], y_train_np[train_idx],
+#             validation_data=(X_train_np[val_idx], y_train_np[val_idx]),
+#             epochs=50,  
+#             batch_size=32,
+#             callbacks=[early_stopping],  
+#             verbose=0
+#         )
+        
+#         # Store metrics
+#         for key in fold_histories:
+#             fold_histories[key].append(history.history[key])
+        
+#         # Store accuracy history for this fold
+#         all_val_accuracies.append(history.history['val_accuracy'])
+
+    
+#     # Calculate mean accuracy (handles variable epoch counts)
+#     max_epochs = max(len(acc) for acc in all_val_accuracies)
+#     mean_val_accuracy = np.zeros(max_epochs)
+#     counts = np.zeros(max_epochs)
+
+#     for acc in all_val_accuracies:
+#         current_epochs = len(acc)
+#         mean_val_accuracy[:current_epochs] += np.array(acc)
+#         counts[:current_epochs] += 1
+        
+#     mean_val_accuracy = mean_val_accuracy / counts  # Avoid division by zero
+    
+#     # Plot the mean accuracy
+#     plt.plot(mean_val_accuracy, color=color, label=f'H={H}', linestyle='-')
+    
+#     # Record results
+#     results['Hidden Units'].append(H)
+#     results['Val Accuracy'].append(
+#         f"{np.mean([h[-1] for h in fold_histories['val_accuracy']]):.3f} ± "
+#         f"{np.std([h[-1] for h in fold_histories['val_accuracy']]):.3f}"
+# )
+#     results['Val F1'].append(
+#         f"{np.mean([f1_score(y_train_np[val_idx], (model.predict(X_train_np[val_idx]) > 0.5).astype(int)) for _, val_idx in StratifiedKFold(n_splits=5).split(X_train_np, y_train_np)]):.3f}")
+#     results['Val ROC AUC'].append(
+#         f"{np.mean([h[-1] for h in fold_histories['val_auc']]):.3f} ± "
+#         f"{np.std([h[-1] for h in fold_histories['val_auc']]):.3f}"
+#     )
+#     results['CE Loss'].append(np.mean([h[-1] for h in fold_histories['val_loss']]))
+#     results['MSE'].append(np.mean([h[-1] for h in fold_histories['val_mse']]))  # From metrics
+    
+
+# # Plot formatting
+# plt.title('Validation Accuracy Convergence (50 Epochs)')
+# plt.xlabel('Epochs')
+# plt.ylabel('Accuracy')
+# plt.legend()
+# plt.grid(True)
+# plt.show()
+
+#-------------------------- A3 ------------------------------------------#
+
+all_convergence_curves = []
+labels = []
+
+for lr, momentum in zip(learning_rates, momentums):
+    print(f"\n=== Testing η={lr}, m={momentum} ===")
+    
+    fold_metrics = {'val_loss': [], 'val_accuracy': [], 'val_mse': []}
+    all_val_accuracies = []
+    
+    for fold, (train_idx, val_idx) in enumerate(StratifiedKFold(n_splits=5).split(X_train_np, y_train_np)):
+        model = Sequential([
+            Input(shape=(X_train_np.shape[1],)),
+            Dense(16, activation='relu'),  # Using optimal 16 neurons
+            Dense(1, activation='sigmoid')
+        ])
+        
+        optimizer = Adam(learning_rate=lr, beta_1=momentum)
+        model.compile(optimizer=optimizer,
+                    loss='binary_crossentropy',
+                    metrics=['accuracy', 'mse'])
+        
         history = model.fit(
             X_train_np[train_idx], y_train_np[train_idx],
             validation_data=(X_train_np[val_idx], y_train_np[val_idx]),
-            epochs=50,  
+            epochs=50,
             batch_size=32,
-            callbacks=[early_stopping],  
+            callbacks=[early_stopping],
             verbose=0
         )
         
-        # Store metrics
-        for key in fold_histories:
-            fold_histories[key].append(history.history[key])
-        
-        # Store accuracy history for this fold
+        fold_metrics['val_loss'].append(history.history['val_loss'][-1])
+        fold_metrics['val_accuracy'].append(history.history['val_accuracy'][-1])
+        fold_metrics['val_mse'].append(history.history['val_mse'][-1])
         all_val_accuracies.append(history.history['val_accuracy'])
-
-        # For convergence plot
-        # mean_val_accuracy.append(history.history['val_accuracy'])
-        # mean_val_accuracy += np.array(history.history['val_accuracy'])
     
-    # Calculate mean accuracy (handles variable epoch counts)
+    # Calculate mean validation accuracy curve
     max_epochs = max(len(acc) for acc in all_val_accuracies)
     mean_val_accuracy = np.zeros(max_epochs)
     counts = np.zeros(max_epochs)
-
+    
     for acc in all_val_accuracies:
         current_epochs = len(acc)
         mean_val_accuracy[:current_epochs] += np.array(acc)
         counts[:current_epochs] += 1
-        
-    mean_val_accuracy = mean_val_accuracy / counts  # Avoid division by zero
     
-    # Plot the mean accuracy
-    plt.plot(mean_val_accuracy, color=color, label=f'H={H}', linestyle='-')
-
-    # # Calculate mean metrics
-    # mean_val_accuracy /= 5  # Average across folds
-    # plt.plot(mean_val_accuracy, color=color, label=f'H={H}', linestyle='-')
+    mean_val_accuracy = mean_val_accuracy / counts
+    all_convergence_curves.append(mean_val_accuracy)
+    labels.append(f"η={lr}, m={momentum}")
+    # plt.plot(mean_val_accuracy, label=f'η={lr}, m={momentum}')
     
     # Record results
-    results['Hidden Units'].append(H)
-    results['Val Accuracy'].append(
-        f"{np.mean([h[-1] for h in fold_histories['val_accuracy']]):.3f} ± "
-        f"{np.std([h[-1] for h in fold_histories['val_accuracy']]):.3f}"
-)
-    results['Val F1'].append(
-        f"{np.mean([f1_score(y_train_np[val_idx], (model.predict(X_train_np[val_idx]) > 0.5).astype(int)) for _, val_idx in StratifiedKFold(n_splits=5).split(X_train_np, y_train_np)]):.3f}")
-    results['Val ROC AUC'].append(
-        f"{np.mean([h[-1] for h in fold_histories['val_auc']]):.3f} ± "
-        f"{np.std([h[-1] for h in fold_histories['val_auc']]):.3f}"
-    )
-    results['CE Loss'].append(np.mean([h[-1] for h in fold_histories['val_loss']]))
-    results['MSE'].append(np.mean([h[-1] for h in fold_histories['val_mse']]))  # From metrics
-    
+    hyper_results['η'].append(lr)
+    hyper_results['m'].append(momentum)
+    hyper_results['CE Loss'].append(f"{np.mean(fold_metrics['val_loss']):.4f}")
+    hyper_results['MSE'].append(f"{np.mean(fold_metrics['val_mse']):.4f}")
+    hyper_results['Accuracy'].append(f"{np.mean(fold_metrics['val_accuracy']):.4f}")
 
-# Plot formatting
-plt.title('Validation Accuracy Convergence (50 Epochs)')
-plt.xlabel('Epochs')
-plt.ylabel('Accuracy')
+plt.figure(figsize=(10, 6))
+for curve, label in zip(all_convergence_curves, labels):
+    plt.plot(curve, label=label)
+plt.xlabel("Epoch")
+plt.ylabel("Mean Validation Accuracy")
+plt.title("Convergence Curves for Different Hyperparameters")
 plt.legend()
 plt.grid(True)
+plt.tight_layout()
 plt.show()
 
 # Display results
-results_df = pd.DataFrame(results)
-print("\n=== Performance Summary (50 Epochs) ===")
-print(results_df.to_markdown(index=False))
+hyper_df = pd.DataFrame(hyper_results)
+print("\n=== Hyperparameter Optimization Results ===")
+print(hyper_df.to_markdown(index=False))
+
+#------------------------------------------------------------------------#
+
+# # Display results
+# results_df = pd.DataFrame(results)
+# print("\n=== Performance Summary (50 Epochs) ===")
+# print(results_df.to_markdown(index=False))
 
 #save results to csv
 # results_df.to_csv('results.csv', index=False)
