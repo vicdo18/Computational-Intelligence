@@ -280,26 +280,143 @@ mean_val_accuracy = [] # solution 2
 
 #-------------------------- A3 ------------------------------------------#
 
-all_convergence_curves = []
-labels = []
+# all_convergence_curves = []
+# labels = []
 
-for lr, momentum in zip(learning_rates, momentums):
-    print(f"\n=== Testing η={lr}, m={momentum} ===")
+# for lr, momentum in zip(learning_rates, momentums):
+#     print(f"\n=== Testing η={lr}, m={momentum} ===")
+    
+#     fold_metrics = {'val_loss': [], 'val_accuracy': [], 'val_mse': []}
+#     all_val_accuracies = []
+    
+#     for fold, (train_idx, val_idx) in enumerate(StratifiedKFold(n_splits=5).split(X_train_np, y_train_np)):
+#         model = Sequential([
+#             Input(shape=(X_train_np.shape[1],)),
+#             Dense(16, activation='relu'),  # Using optimal 16 neurons
+#             Dense(1, activation='sigmoid')
+#         ])
+        
+#         optimizer = Adam(learning_rate=lr, beta_1=momentum)
+#         model.compile(optimizer=optimizer,
+#                     loss='binary_crossentropy',
+#                     metrics=['accuracy', 'mse'])
+        
+#         history = model.fit(
+#             X_train_np[train_idx], y_train_np[train_idx],
+#             validation_data=(X_train_np[val_idx], y_train_np[val_idx]),
+#             epochs=50,
+#             batch_size=32,
+#             callbacks=[early_stopping],
+#             verbose=0
+#         )
+        
+#         fold_metrics['val_loss'].append(history.history['val_loss'][-1])
+#         fold_metrics['val_accuracy'].append(history.history['val_accuracy'][-1])
+#         fold_metrics['val_mse'].append(history.history['val_mse'][-1])
+#         all_val_accuracies.append(history.history['val_accuracy'])
+    
+#     # Calculate mean validation accuracy curve
+#     max_epochs = max(len(acc) for acc in all_val_accuracies)
+#     mean_val_accuracy = np.zeros(max_epochs)
+#     counts = np.zeros(max_epochs)
+    
+#     for acc in all_val_accuracies:
+#         current_epochs = len(acc)
+#         mean_val_accuracy[:current_epochs] += np.array(acc)
+#         counts[:current_epochs] += 1
+    
+#     mean_val_accuracy = mean_val_accuracy / counts
+#     all_convergence_curves.append(mean_val_accuracy)
+#     labels.append(f"η={lr}, m={momentum}")
+#     # plt.plot(mean_val_accuracy, label=f'η={lr}, m={momentum}')
+    
+#     # Record results
+#     hyper_results['η'].append(lr)
+#     hyper_results['m'].append(momentum)
+#     hyper_results['CE Loss'].append(f"{np.mean(fold_metrics['val_loss']):.4f}")
+#     hyper_results['MSE'].append(f"{np.mean(fold_metrics['val_mse']):.4f}")
+#     hyper_results['Accuracy'].append(f"{np.mean(fold_metrics['val_accuracy']):.4f}")
+
+# plt.figure(figsize=(10, 6))
+# for curve, label in zip(all_convergence_curves, labels):
+#     plt.plot(curve, label=label)
+# plt.xlabel("Epoch")
+# plt.ylabel("Mean Validation Accuracy")
+# plt.title("Convergence Curves for Different Hyperparameters")
+# plt.legend()
+# plt.grid(True)
+# plt.tight_layout()
+# plt.show()
+
+# # Display results
+# hyper_df = pd.DataFrame(hyper_results)
+# print("\n=== Hyperparameter Optimization Results ===")
+# print(hyper_df.to_markdown(index=False))
+
+#------------------------------------------------------------------------#
+
+# # Display results
+# results_df = pd.DataFrame(results)
+# print("\n=== Performance Summary (50 Epochs) ===")
+# print(results_df.to_markdown(index=False))
+
+#save results to csv
+# results_df.to_csv('results.csv', index=False)
+
+# ----------------- Regularization Experiment (A4) ----------------- #
+
+# Define the model creation function with L2 regularization
+def create_regularized_model(input_shape, hidden_units=16, l2_lambda=0.001):
+    model = Sequential([
+        Input(shape=(input_shape,)),
+        Dense(hidden_units, activation='relu', 
+              kernel_regularizer=l2(l2_lambda)),
+        Dense(1, activation='sigmoid', 
+              kernel_regularizer=l2(l2_lambda))
+    ])
+    model.compile(
+        optimizer=Adam(learning_rate=0.001, beta_1=0.6),  # Using best η/m from A3
+        loss='binary_crossentropy',
+        metrics=['accuracy', 'mse']
+    )
+    return model
+
+# Regularization coefficients to test
+regularization_rates = [0.0001, 0.001, 0.01]
+
+# Store results
+regularization_results = {
+    'r': [],
+    'CE Loss': [],
+    'MSE': [],
+    'Accuracy': [],
+    'Convergence_Curve': []
+}
+
+# Early stopping callback
+early_stopping = EarlyStopping(
+    monitor='val_loss',
+    patience=5,
+    restore_best_weights=True,
+    verbose=0
+)
+
+# Initialize plot
+plt.figure(figsize=(10, 6))
+colors = ['blue', 'green', 'red']
+
+# Test each regularization rate
+for r, color in zip(regularization_rates, colors):
+    print(f"\n=== Testing L2 Regularization with r={r} ===")
     
     fold_metrics = {'val_loss': [], 'val_accuracy': [], 'val_mse': []}
     all_val_accuracies = []
     
     for fold, (train_idx, val_idx) in enumerate(StratifiedKFold(n_splits=5).split(X_train_np, y_train_np)):
-        model = Sequential([
-            Input(shape=(X_train_np.shape[1],)),
-            Dense(16, activation='relu'),  # Using optimal 16 neurons
-            Dense(1, activation='sigmoid')
-        ])
-        
-        optimizer = Adam(learning_rate=lr, beta_1=momentum)
-        model.compile(optimizer=optimizer,
-                    loss='binary_crossentropy',
-                    metrics=['accuracy', 'mse'])
+        model = create_regularized_model(
+            input_shape=X_train_np.shape[1],
+            l2_lambda=r
+        )
         
         history = model.fit(
             X_train_np[train_idx], y_train_np[train_idx],
@@ -310,6 +427,7 @@ for lr, momentum in zip(learning_rates, momentums):
             verbose=0
         )
         
+        # Store metrics
         fold_metrics['val_loss'].append(history.history['val_loss'][-1])
         fold_metrics['val_accuracy'].append(history.history['val_accuracy'][-1])
         fold_metrics['val_mse'].append(history.history['val_mse'][-1])
@@ -326,39 +444,33 @@ for lr, momentum in zip(learning_rates, momentums):
         counts[:current_epochs] += 1
     
     mean_val_accuracy = mean_val_accuracy / counts
-    all_convergence_curves.append(mean_val_accuracy)
-    labels.append(f"η={lr}, m={momentum}")
-    # plt.plot(mean_val_accuracy, label=f'η={lr}, m={momentum}')
     
-    # Record results
-    hyper_results['η'].append(lr)
-    hyper_results['m'].append(momentum)
-    hyper_results['CE Loss'].append(f"{np.mean(fold_metrics['val_loss']):.4f}")
-    hyper_results['MSE'].append(f"{np.mean(fold_metrics['val_mse']):.4f}")
-    hyper_results['Accuracy'].append(f"{np.mean(fold_metrics['val_accuracy']):.4f}")
+    # Store results
+    regularization_results['r'].append(r)
+    regularization_results['CE Loss'].append(f"{np.mean(fold_metrics['val_loss']):.4f}")
+    regularization_results['MSE'].append(f"{np.mean(fold_metrics['val_mse']):.4f}")
+    regularization_results['Accuracy'].append(f"{np.mean(fold_metrics['val_accuracy']):.4f}")
+    regularization_results['Convergence_Curve'].append(mean_val_accuracy)
+    
+    # Plot the convergence curve
+    plt.plot(mean_val_accuracy, color=color, label=f'r={r}', linewidth=2)
 
-plt.figure(figsize=(10, 6))
-for curve, label in zip(all_convergence_curves, labels):
-    plt.plot(curve, label=label)
-plt.xlabel("Epoch")
-plt.ylabel("Mean Validation Accuracy")
-plt.title("Convergence Curves for Different Hyperparameters")
+# Finalize plot
+plt.title('Validation Accuracy Convergence with L2 Regularization')
+plt.xlabel('Epochs')
+plt.ylabel('Validation Accuracy')
 plt.legend()
 plt.grid(True)
+plt.ylim(0.5, 0.9)  # Adjust based on your actual data
 plt.tight_layout()
 plt.show()
 
-# Display results
-hyper_df = pd.DataFrame(hyper_results)
-print("\n=== Hyperparameter Optimization Results ===")
-print(hyper_df.to_markdown(index=False))
-
-#------------------------------------------------------------------------#
-
-# # Display results
-# results_df = pd.DataFrame(results)
-# print("\n=== Performance Summary (50 Epochs) ===")
-# print(results_df.to_markdown(index=False))
-
-#save results to csv
-# results_df.to_csv('results.csv', index=False)
+# Display results in a table
+reg_df = pd.DataFrame({
+    'r': regularization_results['r'],
+    'CE Loss': regularization_results['CE Loss'],
+    'MSE': regularization_results['MSE'],
+    'Accuracy': regularization_results['Accuracy']
+})
+print("\n=== Regularization Results ===")
+print(reg_df.to_markdown(index=False))
