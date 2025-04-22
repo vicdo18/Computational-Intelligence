@@ -1,5 +1,3 @@
-import os
-import sys
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -8,8 +6,6 @@ from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
-from imblearn.over_sampling import SMOTE
-from imblearn.over_sampling import SMOTENC
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
 from tensorflow.keras.regularizers import l2
@@ -20,8 +16,6 @@ import warnings
 from collections import Counter
 
 # ----------------- Data Preprocessing ----------------- #
-
-# import csv data
 data = pd.read_csv('alzheimers_disease_data.csv')
 # print(data.isnull().sum())  # no missing values
 
@@ -52,14 +46,6 @@ y = data[target_col]
 scaler = MinMaxScaler()
 X[continuous_cols] = scaler.fit_transform(X[continuous_cols])  # scale continuous features
 
-#z score   -- drop , leave minmax
-# X[continuous_cols] = (X[continuous_cols] - X[continuous_cols].mean()) / X[continuous_cols].std()  # z-score normalization
-
-# X.to_csv('processed_data_z.csv', index=False)  # Save the processed data to a new CSV file
-
-# Display processed data
-# print(X.head())
-
 # ----------------- Train-Test Split ----------------- #
 
 # Split into 80% train (for CV) and 20% test (final evaluation)
@@ -77,16 +63,6 @@ print("Class distribution in test set:", y_test.value_counts(normalize=True))
 
 # ----------------- 5-Fold Cross Validation ----------------- #
 
-# def create_model(input_shape):
-#     model = Sequential([
-#         Input(shape=(input_shape,)),  # Explicit Input layer
-#         Dense(32, activation='relu'),  # 1 hidden layer
-#         Dense(1, activation='sigmoid')
-#     ])
-#     optimizer = Adam(learning_rate=0.001) #η = 0.001
-#     model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy', 'mse'])
-#     return model
-
 def create_model(input_shape, hidden_units=32):  # Default 32 neurons if not specified
     model = Sequential([
         Input(shape=(input_shape,)),
@@ -96,13 +72,12 @@ def create_model(input_shape, hidden_units=32):  # Default 32 neurons if not spe
     model.compile(
         optimizer=Adam(learning_rate=0.001),
         loss='binary_crossentropy',
-        metrics=['accuracy', 'mse', tf.keras.metrics.AUC(name='auc')]  # Track MSE explicitly
+        metrics=['accuracy', 'mse', tf.keras.metrics.AUC(name='auc')] 
     )
     return model
 
 # ----------------- Stratified K-Fold Cross Validation ----------------- #
 
-# Initialize StratifiedKFold
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 # Store metrics for each fold
@@ -164,10 +139,6 @@ print("\n=== Average Cross-Validation Metrics ===")
 for metric in fold_metrics:
     print(f"Mean {metric}: {np.mean(fold_metrics[metric]):.4f} (±{np.std(fold_metrics[metric]):.4f})")
 
-
-#print input shape
-# print("Input shape:", X_train.shape[1])
-
 #------------ TEST I ------------------------------#
 
 # Define neuron counts to test (I = number of input features)
@@ -196,8 +167,6 @@ hyper_results = {
     'Accuracy': []
 }
 
-
-# Plotting setup
 # plt.figure(figsize=(12, 8))
 colors = ['blue', 'green', 'red', 'orange']  # Colors for different hidden units
 
@@ -209,9 +178,9 @@ early_stopping = EarlyStopping(
     verbose=1
 )
 
-mean_val_accuracy = [] # solution 2 
+mean_val_accuracy = [] 
 
-#------------------------------------------ a2 -----------------------------#
+#------------------------------------------ A2 -----------------------------#
 
 # for H, color in zip(hidden_units_list, colors):
 #     print(f"\n=== Experiment: Hidden Units = {H} ===")
@@ -461,7 +430,7 @@ plt.xlabel('Epochs')
 plt.ylabel('Validation Accuracy')
 plt.legend()
 plt.grid(True)
-plt.ylim(0.5, 0.9)  # Adjust based on your actual data
+plt.ylim(0.5, 0.9)  
 plt.tight_layout()
 plt.show()
 
