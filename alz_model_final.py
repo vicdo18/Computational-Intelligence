@@ -112,3 +112,41 @@ plt.legend()
 plt.grid(True)
 plt.show()
 
+
+# ----------------- Train & Save Final Model ----------------- #
+best_architecture = [32, 16]  # From your results
+
+# 1. Create best model
+final_model = create_multi_layer_model(X_train_np.shape[1], best_architecture)
+
+# 2. Enhanced early stopping
+early_stopping = EarlyStopping(
+    monitor='val_loss',
+    patience=10,  # Increased patience
+    restore_best_weights=True,
+    verbose=1
+)
+
+# 3. Train on full training data with validation split
+history = final_model.fit(
+    X_train_np,
+    y_train_np,
+    epochs=50,  
+    batch_size=32,
+    validation_split=0.2,
+    callbacks=[early_stopping],
+    verbose=1
+)
+
+# 4. Save weights in HDF5 format
+final_model.save_weights('best_model.weights.h5')
+
+# 5. (Optional) Save full model for inspection
+final_model.save('full_alzheimers_model.h5')
+
+# 6. Evaluate on test set
+test_loss, test_acc, _ = final_model.evaluate(X_test.values, y_test.values, verbose=0)
+print(f"\nFinal Model Test Accuracy: {test_acc*100:.2f}%")
+print(f"Model weights saved to 'best_model.weights.h5'")
+
+
