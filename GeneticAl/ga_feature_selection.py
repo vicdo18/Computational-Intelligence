@@ -152,7 +152,7 @@ def evaluate_setting(model, X_test_np, y_test_np, pop_size, mutation_rate, cross
             model=model,
             X_test_np=X_test_np,
             y_test_np=y_test_np,
-            num_features=X_test_np.shape[1],  # or len(X.columns)
+            num_features=X_test_np.shape[1],  
             num_generations=100,
             pop_size=30,
             mutation_rate=0.05,
@@ -198,7 +198,7 @@ def evaluate_setting(model, X_test_np, y_test_np, pop_size, mutation_rate, cross
         generation_counts.append(len(fitness_curve))
         all_fitness_curves.append(fitness_curve)
 
-    # Make all curves the same length by padding with last value
+    # Make all curves the same length by padding with last value (??)
     max_len = max(len(curve) for curve in all_fitness_curves)
     for i in range(len(all_fitness_curves)):
         last_val = all_fitness_curves[i][-1]
